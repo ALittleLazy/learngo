@@ -18,7 +18,7 @@ loop:
 	for scanner.Scan() {
 		switch scanner.Text() {
 		case "mssql":
-			mssql.ConnMssql(scanner)
+			mssql.Menu()
 		default:
 			break loop
 		}
