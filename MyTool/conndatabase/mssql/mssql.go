@@ -51,7 +51,7 @@ load:
 	if err != nil {
 		log.Println(err)
 		filekey = k
-		key = newKey(filename, filekey)
+		key = newKey(k, filekey)
 	}
 
 	scanner.Scan()
@@ -182,7 +182,7 @@ func readINI(file, file_path, filename string) (map[string]connParamater, error)
 					filekey = splitstr2[1][:32]
 				}
 
-				key = newKey(filename, filekey)
+				key = newKey(k, filekey)
 				break
 			}
 		}
@@ -269,7 +269,7 @@ func saveConnStr(databaseip map[string]connParamater, file, file_path, filename 
 	var str string = "KEY|" + key + "\n"
 
 	for _, connParaSet := range databaseip {
-		str += aescbc.AesEncrypt(fmt.Sprintf("%s|%s|%s|%s|%s|%s|", connParaSet.tp, connParaSet.ip, connParaSet.database, connParaSet.userid, connParaSet.password, connParaSet.remark), newKey(filename, key)) + "\n"
+		str += aescbc.AesEncrypt(fmt.Sprintf("%s|%s|%s|%s|%s|%s|", connParaSet.tp, connParaSet.ip, connParaSet.database, connParaSet.userid, connParaSet.password, connParaSet.remark), newKey(k, key)) + "\n"
 	}
 
 	if err := readwrite.WriteString(str, filepath.Join(file_path, filename)); err != nil {
