@@ -1,6 +1,7 @@
 package mssql
 
 import (
+	"MyTool/aescbc"
 	"MyTool/readwrite"
 	"bufio"
 	"database/sql"
@@ -19,6 +20,12 @@ type connParamater struct {
 }
 
 //var databaseip map[string] connParamater
+var key, filekey string
+
+func mainMenu() {
+	fmt.Println()
+	fmt.Println("n:新建连接；r:显示现有链接；c:测试现有链接")
+}
 
 func Menu() {
 	var file, file_path, filename string
@@ -26,22 +33,29 @@ func Menu() {
 	file_path, _ = filepath.Abs(file)
 	file_path, filename = filepath.Split(file_path)
 	filename = strings.Replace(filename, filepath.Ext(filename), ".ini", -1)
-	//filename = "___go_build_CanDo_go.ini"
+	filename = "___1go_build_CanDo_go.ini"
 
 	menuno := make([]string, 10, 20)
 
 	scanner := bufio.NewScanner(os.Stdin)
 
-	fmt.Println("n:新建连接；r:显示现有链接；c:测试现有链接")
+	mainMenu()
 
 	databaseip, err := readINI(file, file_path, filename)
 	if err != nil {
 		log.Println(err)
+		filekey = "C70CB1D7A85944A08524065A4367392D"
+		mw := aescbc.AesEncrypt(filename, filekey)
+		if len(mw) >= 32 {
+			key = mw[len(mw)-32:]
+		} else {
+			key = string(aescbc.PKCS7Padding([]byte(mw), 32))
+		}
 	}
 
 loop:
 	for scanner.Scan() {
-		switch scanner.Text() {
+		switch strings.Split(scanner.Text(), " ")[0] {
 		case "n":
 			newConnStr, err := newConnMssqlPing(scanner)
 			if err != nil {
@@ -72,6 +86,7 @@ loop:
 		default:
 			break loop
 		}
+		mainMenu()
 	}
 
 	if err := scanner.Err(); err != nil {
@@ -85,20 +100,60 @@ func readINI(file, file_path, filename string) (map[string]connParamater, error)
 
 	databaseip := make(map[string]connParamater)
 
-	fileobj, err := os.Open(filepath.Join(file_path, filename))
-	if err != nil {
-		return databaseip, nil
-	}
-	defer fileobj.Close()
+	//fileobj, err := os.Open(filepath.Join(file_path, filename))
+	//if err != nil {
+	//	return databaseip, nil
+	//}
+	//defer fileobj.Close()
 
-	readfileobj := bufio.NewReader(fileobj)
-	readtxt, err := readfileobj.ReadString(byte('@'))
+	//readfileobj := bufio.NewReader(fileobj)
+	//readtxt, err := readfileobj.ReadString(byte('@'))
+	//if err != nil && err != io.EOF {
+	//	return databaseip, err
+	//}
+	readtxt, err := readwrite.ReadString(filepath.Join(file_path, filename))
 	if err != nil && err != io.EOF {
 		return databaseip, err
 	}
 
 	splitstr := strings.Split(readtxt, "\n")
 	for _, v := range splitstr {
+		if len(v) >= 4 {
+			if v[:4] != "KEY|" {
+				continue
+			}
+		}
+		splitstr2 := strings.Split(v, "|")
+		if len(splitstr2) >= 2 {
+			if splitstr2[0] == "KEY" {
+				if len(splitstr2[1]) < 32 {
+					filekey = "C70CB1D7A85944A08524065A4367392D"
+				} else {
+					filekey = splitstr2[1][:32]
+				}
+
+				mw := aescbc.AesEncrypt(filename, filekey)
+				if len(mw) >= 32 {
+					key = mw[len(mw)-32:]
+				} else {
+					key = string(aescbc.PKCS7Padding([]byte(mw), 32))
+				}
+				break
+			}
+		}
+	}
+
+	for _, v := range splitstr {
+
+		if len(v) >= 4 {
+			if v[:4] == "KEY|" {
+				continue
+			}
+		} else {
+			continue
+		}
+
+		v = aescbc.AesDecrypt(v, key)
 		splitstr2 := strings.Split(v, "|")
 		if len(splitstr2) >= 5 {
 			if _, ok := tp[splitstr2[0]]; ok {
@@ -106,7 +161,6 @@ func readINI(file, file_path, filename string) (map[string]connParamater, error)
 			}
 		}
 	}
-
 	return databaseip, nil
 }
 
@@ -163,9 +217,9 @@ func connMssqlPing(connParaSet connParamater) error {
 }
 
 func saveConnStr(databaseip map[string]connParamater, file, file_path, filename string) error {
-	var str string
+	var str string = "KEY|" + filekey + "\n"
 	for _, connParaSet := range databaseip {
-		str += fmt.Sprintf("%s|%s|%s|%s|%s|%s|\n", connParaSet.tp, connParaSet.ip, connParaSet.database, connParaSet.userid, connParaSet.password, connParaSet.remark)
+		str += aescbc.AesEncrypt(fmt.Sprintf("%s|%s|%s|%s|%s|%s|", connParaSet.tp, connParaSet.ip, connParaSet.database, connParaSet.userid, connParaSet.password, connParaSet.remark), key) + "\n"
 	}
 
 	if err := readwrite.WriteString(str, filepath.Join(file_path, filename)); err != nil {

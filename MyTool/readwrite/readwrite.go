@@ -2,6 +2,7 @@ package readwrite
 
 import (
 	"bufio"
+	"io"
 	"os"
 )
 
@@ -29,4 +30,20 @@ func WriteString(wstr string, filename string) error {
 	}
 
 	return nil
+}
+func ReadString(filename string) (str string, err error) {
+	fileobj, err := os.Open(filename)
+	if err != nil {
+		return str, err
+	}
+	defer fileobj.Close()
+
+	readfileobj := bufio.NewReader(fileobj)
+	readtxt, err := readfileobj.ReadString(byte('@'))
+	if err != nil && err != io.EOF {
+		return str, err
+	}
+
+	str = readtxt
+	return str, nil
 }

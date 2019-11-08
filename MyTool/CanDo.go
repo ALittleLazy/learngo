@@ -7,10 +7,14 @@ import (
 	"os"
 )
 
-func main() {
+func mainMenu() {
+	fmt.Println()
+	fmt.Println("mssql:MSSQL管理")
+}
 
+func main() {
 	fmt.Println("欢迎使用本工具，输入-help可以查看帮助。")
-	fmt.Println("目前支持mssql数据库连接检测。")
+	mainMenu()
 
 	scanner := bufio.NewScanner(os.Stdin)
 
@@ -22,6 +26,7 @@ loop:
 		default:
 			break loop
 		}
+		mainMenu()
 	}
 
 	if err := scanner.Err(); err != nil {
