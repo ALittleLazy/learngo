@@ -31,7 +31,7 @@ func main() {
 	defer conn.Close()
 
 	//产生查询语句的Statement
-	stmt, err := conn.Prepare("select top 1 * from t2")
+	stmt, err := conn.Prepare(getMssqlJobStr())
 	if err != nil {
 		log.Fatal("Prepare failed:", err.Error())
 	}
@@ -48,15 +48,16 @@ func main() {
 	var colsdata = make([]interface{}, len(cols))
 	for i := 0; i < len(cols); i++ {
 		colsdata[i] = new(interface{})
-		fmt.Print(cols[i])
-		fmt.Print("\t")
+		//fmt.Print(cols[i])
+		//fmt.Print("\t")
 	}
 	fmt.Println()
 
 	//遍历每一行
 	for rows.Next() {
 		rows.Scan(colsdata...) //将查到的数据写入到这行中
-		PrintRow(colsdata)     //打印此行
+		fmt.Println("colsdata:", colsdata)
+		PrintRow(colsdata) //打印此行
 	}
 	defer rows.Close()
 }
@@ -83,4 +84,28 @@ func PrintRow(colsdata []interface{}) {
 		fmt.Print("\t")
 	}
 	fmt.Println()
+}
+
+func getMssqlJobStr() string {
+	var sqlstr string
+	sqlstr = "create table #help_job(" + "\n" +
+		"job_id uniqueidentifier not null," + "\n" +
+		"last_run_date int not null," + "\n" +
+		"last_run_time int not null," + "\n" +
+		"next_run_date int not null," + "\n" +
+		"next_run_time int not null," + "\n" +
+		"next_run_schedule_id int not null," + "\n" +
+		"requested_to_run int not null, " + "\n" +
+		"request_source int not null," + "\n" +
+		"request_source_id sysname null," + "\n" +
+		"running int not null, " + "\n" +
+		"current_step int not null," + "\n" +
+		"current_retry_attempt int not null," + "\n" +
+		"job_state int not null" + "\n" +
+		")" + "\n" +
+		"insert into #help_job execute master.dbo.xp_sqlagent_enum_jobs 1, 'sa'" + "\n" +
+		"SELECT c.name,current_execution_status = a.job_state,start_execution_date = (SELECT MAX(a2.start_execution_date) FROM msdb.dbo.sysjobactivity a2 WHERE a2.job_id = a.job_id AND a2.start_execution_date IS NOT NULL AND a2.stop_execution_date IS NULL AND a2.session_id = (SELECT MAX(a3.session_id) FROM msdb.dbo.syssessions a3)),last_run_outcome = (SELECT TOP 1 a2.last_run_outcome FROM msdb.dbo.sysjobservers a2 WHERE a2.job_id = a.job_id) FROM #help_job a JOIN msdb.dbo.sysjobs c ON c.job_id = a.job_id" + "\n" +
+		"IF OBJECT_ID('tempdb..#help_job') IS NOT NULL DROP TABLE #help_job"
+	//sqlstr = "select C1 from t1"
+	return sqlstr
 }

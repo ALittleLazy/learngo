@@ -1,7 +1,7 @@
 package main
 
 import (
-	"MyTool/conndatabase/mssql"
+	"MyTool/menu"
 	"bufio"
 	"fmt"
 	"os"
@@ -22,7 +22,7 @@ loop:
 	for scanner.Scan() {
 		switch scanner.Text() {
 		case "mssql":
-			mssql.Menu()
+			menu.Menu()
 		default:
 			break loop
 		}
