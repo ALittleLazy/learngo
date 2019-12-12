@@ -5,7 +5,6 @@ import (
 	"MyTool/conndatabase/mssql"
 	"MyTool/readwrite"
 	"bufio"
-	"database/sql"
 	"fmt"
 	"io"
 	"log"
@@ -16,15 +15,6 @@ import (
 	"strconv"
 	"strings"
 )
-
-type jobsInfoStruct struct {
-	ip               string
-	databasename     string
-	name             sql.NullString
-	state            sql.NullInt64
-	startdate        sql.NullString
-	last_run_outcome sql.NullInt64
-}
 
 const k string = "C70CB1D7A85944A08524065A4367392D"
 
@@ -44,14 +34,12 @@ func Menu() {
 	//filename = "___1go_build_CanDo_go.ini"
 
 	menuno := make([]string, 1, 20)
-	var jobsinfo = make([]jobsInfoStruct, 0, 100)
+	//var jobsinfo = make([]interface{}, 0, 100)
 
 	scanner := bufio.NewScanner(os.Stdin)
 
 load:
 	mainMenu()
-
-	//var jobsinfo = make([]jobsInfoStruct,50,30)
 
 	databaseip, err := readINI(file, file_path, filename)
 	if err != nil {
@@ -94,7 +82,6 @@ load:
 				if idx > 0 && len(v) > 0 {
 					if ok, _ := regexp.MatchString("\\d", v); ok {
 						j, _ = strconv.ParseInt(v, 0, 0)
-						j = j - 1
 					}
 					if ok, _ := regexp.MatchString("\\D", v); ok {
 						item = v
@@ -102,26 +89,49 @@ load:
 				}
 			}
 
-			if j >= 0 && j <= int64(len(menuno)-1) && item == "" {
+			if j > 0 && j <= int64(len(menuno)-1) && item == "" {
+				j--
 				if err := mssql.ConnMssqlPing(databaseip[menuno[j]]); err != nil {
 					fmt.Println(err)
 				} else {
 					fmt.Println(databaseip[menuno[j]].Ip, databaseip[menuno[j]].Database, databaseip[menuno[j]].Userid, "链接成功")
 				}
-			} else if j >= 0 && j <= int64(len(menuno)-1) && item == "a" {
+			} else if j > 0 && j <= int64(len(menuno)-1) && item == "a" {
 				//fmt.Println(getMssqlJobStr())
-
+				j--
 				if datainfo, err := mssql.ConnMssqlExec(databaseip[menuno[j]], getMssqlJobStr()); err != nil {
 					fmt.Println(err)
 				} else {
-					for _, val := range datainfo {
-						for _, val2 := range val {
-							fmt.Println(val2)
-						}
-						fmt.Println(val.(interface{}))
 
+					for _, val := range datainfo {
+						/*取传值中的inteface{}各项值
+						for idx:=0;idx < reflect.ValueOf(val).Len();idx++{
+							fmt.Println("idx value:",reflect.ValueOf(val).Index(idx))
+						}*/
+						/*v := []interface{}{databaseip[menuno[j]].Ip}
+						val := append(v,val)
+						jobsinfo = append(jobsinfo,val)*/
+						fmt.Println(databaseip[menuno[j]].Ip, val)
 					}
-					fmt.Println(jobsinfo)
+					//fmt.Println(datainfo[0][2])
+				}
+			} else {
+				for _, v := range databaseip {
+					if datainfo, err := mssql.ConnMssqlExec(v, getMssqlJobStr()); err != nil {
+						fmt.Println(err)
+					} else {
+						for _, val := range datainfo {
+							/*取传值中的inteface{}各项值
+							for idx:=0;idx < reflect.ValueOf(val).Len();idx++{
+								fmt.Println("idx value:",reflect.ValueOf(val).Index(idx))
+							}*/
+							/*v := []interface{}{databaseip[menuno[j]].Ip}
+							val := append(v,val)
+							jobsinfo = append(jobsinfo,val)*/
+							fmt.Println(v.Ip, val)
+						}
+						//fmt.Println(datainfo[0][2])
+					}
 				}
 			}
 			goto load
@@ -255,7 +265,7 @@ func getMssqlJobStr() string {
 		"job_state int not null" + "\n" +
 		")" + "\n" +
 		"insert into #help_job execute master.dbo.xp_sqlagent_enum_jobs 1, 'sa'" + "\n" +
-		"SELECT c.name,current_execution_status = a.job_state,start_execution_date = (SELECT MAX(a2.start_execution_date) FROM msdb.dbo.sysjobactivity a2 WHERE a2.job_id = a.job_id AND a2.start_execution_date IS NOT NULL AND a2.stop_execution_date IS NULL AND a2.session_id = (SELECT MAX(a3.session_id) FROM msdb.dbo.syssessions a3)),last_run_outcome = (SELECT TOP 1 a2.last_run_outcome FROM msdb.dbo.sysjobservers a2 WHERE a2.job_id = a.job_id) FROM #help_job a JOIN msdb.dbo.sysjobs c ON c.job_id = a.job_id" + "\n" +
+		"SELECT CASE e.enabled WHEN 1 THEN '启用' ELSE '未启用' END,e.name,CASE e.current_execution_status WHEN 1 THEN '执行中' WHEN 3 THEN '重试间隔' WHEN 4 THEN '当前空闲' END,e.start_execution_date,CASE e.last_run_outcome WHEN 0 THEN '上次执行失败' WHEN 1 THEN '上次执行成功' WHEN 3 THEN '上次执行取消' WHEN 5 THEN '未知' END FROM (SELECT c.name,current_execution_status = a.job_state,start_execution_date = (SELECT MAX(a2.start_execution_date) FROM msdb.dbo.sysjobactivity a2 WHERE a2.job_id = a.job_id AND a2.start_execution_date IS NOT NULL AND a2.stop_execution_date IS NULL AND a2.session_id = (SELECT MAX(a3.session_id) FROM msdb.dbo.syssessions a3)),last_run_outcome = (SELECT TOP 1 a2.last_run_outcome FROM msdb.dbo.sysjobservers a2 WHERE a2.job_id = a.job_id),c.enabled FROM #help_job a JOIN msdb.dbo.sysjobs c ON c.job_id = a.job_id WHERE a.job_state IN (3,4)) e WHERE e.last_run_outcome IN (0,3) AND e.enabled = 1" + "\n" +
 		"IF OBJECT_ID('tempdb..#help_job') IS NOT NULL DROP TABLE #help_job"
 	//sqlstr = "select C1 from t1"
 	return sqlstr

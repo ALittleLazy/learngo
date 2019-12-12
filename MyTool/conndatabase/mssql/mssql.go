@@ -92,18 +92,19 @@ func ConnMssqlExec(connParaSet ConnParamater, sqlstr string) ([]interface{}, err
 
 	cols, _ := datarows.Columns()
 	datainfo := make([]interface{}, 0, 30)
-	rowinfo := make([]interface{}, len(cols))
+	rowinfo := make([]interface{}, len(cols)) //为什么make([]interface{}, len(cols))写为make([]interface{},0,len(cols))会报错？
 
+	//为什么没有这部分会报错？
 	row := make([]interface{}, len(cols))
 	for idx := range rowinfo {
 		row[idx] = new(interface{})
 	}
 
-	rowinfo = nil
+	/*rowinfo = nil
 	for _, val := range cols {
 		rowinfo = append(rowinfo, val)
 	}
-	datainfo = append(datainfo, rowinfo)
+	datainfo = append(datainfo, rowinfo)*/
 
 	for datarows.Next() {
 
