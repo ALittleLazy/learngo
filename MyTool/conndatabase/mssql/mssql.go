@@ -51,7 +51,7 @@ func ConnMssqlPing(connParaSet ConnParamater) error {
 		return errors.New("error:数据库地址为空")
 	}
 
-	connstr := fmt.Sprintf("server=%s;user id=%s;password=%s;database=%s;encrypt=disable", connParaSet.Ip, connParaSet.Userid, connParaSet.Password, connParaSet.Database)
+	connstr := fmt.Sprintf("server=%s;user id=%s;password=%s;database=%s;encrypt=disable;dial timeout=5", connParaSet.Ip, connParaSet.Userid, connParaSet.Password, connParaSet.Database)
 
 	db, err := sql.Open("mssql", connstr)
 	defer db.Close()

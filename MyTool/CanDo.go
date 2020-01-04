@@ -9,11 +9,11 @@ import (
 
 func mainMenu() {
 	fmt.Println()
-	fmt.Println("mssql:MSSQL管理")
+	fmt.Println("MSSQL管理:mssql")
 }
 
 func main() {
-	fmt.Println("欢迎使用本工具，输入-help可以查看帮助。")
+	fmt.Println("欢迎使用本工具，目前支持数据连接及作业检查。")
 	mainMenu()
 
 	scanner := bufio.NewScanner(os.Stdin)

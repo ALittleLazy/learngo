@@ -22,7 +22,7 @@ var key, filekey string
 
 func mainMenu() {
 	fmt.Println()
-	fmt.Println("n:新建连接；r:显示现有链接；c:测试连接 c [编号][a:作业检查] ; d:删除连接 d [编号]|[all]")
+	fmt.Println("n:新建连接；r:显示现有链接；c:测试连接 c [编号][a:作业检查(最后一次)] ; d:删除连接 d [编号]|[all]")
 }
 
 func Menu() {
@@ -45,7 +45,7 @@ load:
 	if err != nil {
 		log.Println(err)
 		filekey = k
-		key = newKey(k, filekey)
+		key = NewKey(k, filekey)
 	}
 
 	scanner.Scan()
@@ -220,7 +220,7 @@ func readINI(file, file_path, filename string) (map[string]mssql.ConnParamater, 
 					filekey = splitstr2[1][:32]
 				}
 
-				key = newKey(k, filekey)
+				key = NewKey(k, filekey)
 				break
 			}
 		}
@@ -275,7 +275,7 @@ func saveConnStr(databaseip map[string]mssql.ConnParamater, file, file_path, fil
 	var str string = "KEY|" + key + "\n"
 
 	for _, connParaSet := range databaseip {
-		str += aescbc.AesEncrypt(fmt.Sprintf("%s|%s|%s|%s|%s|%s|", connParaSet.Tp, connParaSet.Ip, connParaSet.Database, connParaSet.Userid, connParaSet.Password, connParaSet.Remark), newKey(k, key)) + "\n"
+		str += aescbc.AesEncrypt(fmt.Sprintf("%s|%s|%s|%s|%s|%s|", connParaSet.Tp, connParaSet.Ip, connParaSet.Database, connParaSet.Userid, connParaSet.Password, connParaSet.Remark), NewKey(k, key)) + "\n"
 	}
 
 	if err := readwrite.WriteString(str, filepath.Join(file_path, filename)); err != nil {
